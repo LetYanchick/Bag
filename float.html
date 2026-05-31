@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 100px;
+      height: 100px;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .icon {
+      width: 56px;
+      height: 56px;
+      margin: 25px;
+      background: #5b4fcf;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 15px rgba(91, 79, 207, 0.5);
+      transition: transform 0.15s, box-shadow 0.15s;
+      cursor: grab;
+    }
+
+    .icon:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(91, 79, 207, 0.7);
+    }
+
+    .icon:active {
+      cursor: grabbing;
+    }
+  </style>
+</head>
+<body>
+  <div class="icon" id="btn">🍎</div>
+
+  <script>
+    const { ipcRenderer } = require('electron')
+
+    let isDragging = false
+    let startX, startY
+    let originX, originY
+    let hasMoved = false
+
+    btn.addEventListener('contextmenu', (e) => {
+        e.preventDefault()
+        ipcRenderer.send('hide-float')
+    })
+
+    btn.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) 
+            return  // реагируем только на левую кнопку
+        isDragging = true
+        hasMoved = false
+        startX = e.screenX
+        startY = e.screenY
+        originX = e.screenX
+        originY = e.screenY
+        ipcRenderer.send('drag-start')
+    })
+
+    // Движение — отправляем дельту в main
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return
+      const deltaX = e.screenX - startX
+      const deltaY = e.screenY - startY
+
+      // Считаем что это drag только если сдвинулись больше 8px
+      if (Math.abs(e.screenX - originX) > 15 || Math.abs(e.screenY - originY) > 15) {
+        hasMoved = true
+      }
+
+      ipcRenderer.send('drag-move', { deltaX, deltaY })
+      startX = e.screenX
+      startY = e.screenY
+    })
+
+    window.addEventListener('mouseup', () => {
+        //console.log('mouseup, hasMoved:', hasMoved, 'isDragging:', isDragging)
+        const wasClick = isDragging && !hasMoved
+        isDragging = false
+        hasMoved = false
+        if (wasClick) {
+            ipcRenderer.send('toggle-main')
+        }
+    })
+
+  </script>
+</body>
+</html>
